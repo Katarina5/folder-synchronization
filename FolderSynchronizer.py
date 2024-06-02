@@ -1,6 +1,8 @@
+from sys import exit
 from filecmp import cmp
 import logging
 from os import walk
+from os.path import isdir
 import shutil
 from time import sleep
 from pathlib import Path
@@ -78,16 +80,31 @@ class FolderSynchronizer:
         :param interval_seconds: Time interval (in seconds) between synchronizations.
         :param log_file: Path to the log file.
         """
+        if interval_seconds < 0:
+            logging.error('Value of interval_seconds must be greater than or equal to 0.')
+            exit(1)
         self.source = source
         self.replica = replica
         self.interval_seconds = interval_seconds
         self.log_file = log_file
         self.setup_logging()
 
+    def validate_log_file(self):
+        """
+        Validate that the value of log_file argument is a valid file name for logging.
+        """
+        try:
+            with open(self.log_file, 'a+'):
+                pass
+        except Exception as e:
+            logging.error(f'Cannot open or create log file {self.log_file}: {e}.')
+            exit(1)
+
     def setup_logging(self):
         """
         Set up log format, log file name and logging to console.
         """
+        self.validate_log_file()
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s',
                             handlers=[
@@ -100,10 +117,20 @@ class FolderSynchronizer:
         Synchronize the replica folder to be identical to the source folder.
         """
         while True:
+            self.validate_folder_exists()
             self.copy_from_source_to_replica()
             self.remove_replica_if_not_in_source()
             logging.info(f'Synchronization finished. Repeating again in {self.interval_seconds} seconds.')
             sleep(self.interval_seconds)
+
+    def validate_folder_exists(self):
+        """
+        Validate that source and replica folders exist.
+        """
+        for f in [self.source, self.replica]:
+            if not isdir(f):
+                logging.error(f'Folder {f} does not exist.')
+                exit(1)
 
     def copy_from_source_to_replica(self):
         """
