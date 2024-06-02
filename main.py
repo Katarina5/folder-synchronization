@@ -20,6 +20,7 @@ def main():
     """ Main program """
     args = get_arguments()
     synchronizer = FolderSynchronizer(args.source_folder, args.replica_folder, args.interval_seconds, args.log_file)
+    synchronizer.sync()
     return 0
 
 
